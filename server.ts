@@ -13,7 +13,7 @@ interface ConnectedClient {
 
 const clients = new Map<WebSocket, ConnectedClient>();
 
-const wss = new WebSocketServer({ port: PORT });
+const wss = new WebSocketServer({ host: "0.0.0.0", port: PORT });
 
 function broadcast(event: ServerEvent, exclude?: WebSocket) {
   const data = JSON.stringify(event);
@@ -109,4 +109,4 @@ wss.on("connection", (ws: WebSocket) => {
   });
 });
 
-console.log(`WebSocket server running on ws://localhost:${PORT}`);
+console.log(`WebSocket server running on ws://0.0.0.0:${PORT}`);

@@ -1,12 +1,15 @@
 import type { ClientEvent, ServerEvent } from "@/types/chat";
 
-const WS_URL = "ws://localhost:3001";
+function getWsUrl(): string {
+  const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
+  return `ws://${host}:3001`;
+}
 
 export function createWebSocket(
   onEvent: (event: ServerEvent) => void,
   onClose: () => void
 ): WebSocket {
-  const ws = new WebSocket(WS_URL);
+  const ws = new WebSocket(getWsUrl());
 
   ws.onmessage = (e) => {
     try {
