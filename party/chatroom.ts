@@ -1,8 +1,19 @@
 import type * as Party from "partykit/server";
 import type { ServerEvent } from "../src/types/chat";
 
+const AVATARS = ["🦊", "🐱", "🐶", "🐸", "🐵", "🐰", "🐻", "🐼", "🦁", "🐯", "🐨", "🦄"];
+
+function getDefaultAvatar(username: string): string {
+  let hash = 0;
+  for (let i = 0; i < username.length; i++) {
+    hash = username.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATARS[Math.abs(hash) % AVATARS.length];
+}
+
 interface ConnectionState {
   username: string;
+  avatar: string;
 }
 
 export default class ChatRoom implements Party.Server {
@@ -10,12 +21,12 @@ export default class ChatRoom implements Party.Server {
 
   private lastMessageTime = new Map<string, number>();
 
-  private getActiveUsers(): string[] {
-    const users: string[] = [];
+  private getActiveUsers(): { username: string; avatar: string }[] {
+    const users: { username: string; avatar: string }[] = [];
     for (const conn of this.room.getConnections<ConnectionState>()) {
-      const username = conn.state?.username;
-      if (username) {
-        users.push(username);
+      const state = conn.state;
+      if (state?.username) {
+        users.push({ username: state.username, avatar: state.avatar });
       }
     }
     return users;
@@ -48,23 +59,37 @@ export default class ChatRoom implements Party.Server {
       return;
     }
 
-    conn.setState({ username });
+    const avatarParam = url.searchParams.get("avatar");
+    const avatar = avatarParam && AVATARS.includes(avatarParam)
+      ? avatarParam
+      : getDefaultAvatar(username);
+
+    conn.setState({ username, avatar });
 
     // Tell everyone (except this user) that they joined
-    this.broadcast({ event: "user-joined", username }, conn.id);
+    this.broadcast({ event: "user-joined", username, avatar }, conn.id);
 
     // Send updated users list to all
     this.broadcastAll({ event: "users-list", users: this.getActiveUsers() });
   }
 
   onMessage(message: string, sender: Party.Connection<ConnectionState>) {
-    const username = sender.state?.username;
-    if (!username) return;
+    const state = sender.state;
+    if (!state?.username) return;
 
-    let parsed: { event: string; text?: string };
+    let parsed: { event: string; text?: string; avatar?: string };
     try {
       parsed = JSON.parse(message);
     } catch {
+      return;
+    }
+
+    if (parsed.event === "change-avatar") {
+      const newAvatar = parsed.avatar;
+      if (newAvatar && AVATARS.includes(newAvatar)) {
+        sender.setState({ ...state, avatar: newAvatar });
+        this.broadcastAll({ event: "users-list", users: this.getActiveUsers() });
+      }
       return;
     }
 
@@ -82,7 +107,8 @@ export default class ChatRoom implements Party.Server {
     const messageEvent: ServerEvent = {
       event: "message",
       id: crypto.randomUUID(),
-      username,
+      username: state.username,
+      avatar: state.avatar,
       text,
       timestamp: now,
     };
@@ -92,11 +118,11 @@ export default class ChatRoom implements Party.Server {
   }
 
   onClose(conn: Party.Connection<ConnectionState>) {
-    const username = conn.state?.username;
+    const state = conn.state;
     this.lastMessageTime.delete(conn.id);
 
-    if (username) {
-      this.broadcast({ event: "user-left", username }, conn.id);
+    if (state?.username) {
+      this.broadcast({ event: "user-left", username: state.username, avatar: state.avatar }, conn.id);
       this.broadcastAll({ event: "users-list", users: this.getActiveUsers() });
     }
   }

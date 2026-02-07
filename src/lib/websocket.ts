@@ -3,6 +3,7 @@ import type { ClientEvent, ServerEvent } from "@/types/chat";
 
 export function createWebSocket(
   username: string,
+  avatar: string,
   onEvent: (event: ServerEvent) => void,
   onClose: () => void
 ): PartySocket {
@@ -11,7 +12,7 @@ export function createWebSocket(
   const ws = new PartySocket({
     host,
     room: "main",
-    query: { username },
+    query: { username, avatar },
   });
 
   ws.onmessage = (e) => {

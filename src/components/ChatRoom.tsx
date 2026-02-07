@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { createWebSocket, sendEvent } from "@/lib/websocket";
 import type { DisplayMessage, ServerEvent } from "@/types/chat";
@@ -9,14 +9,25 @@ import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import UsersList from "./UsersList";
 
+const AVATARS = ["🦊", "🐱", "🐶", "🐸", "🐵", "🐰", "🐻", "🐼", "🦁", "🐯", "🐨", "🦄"];
+
+function getDefaultAvatar(username: string): string {
+  let hash = 0;
+  for (let i = 0; i < username.length; i++) {
+    hash = username.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATARS[Math.abs(hash) % AVATARS.length];
+}
+
 interface ChatRoomProps {
   username: string;
 }
 
 export default function ChatRoom({ username }: ChatRoomProps) {
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
-  const [users, setUsers] = useState<string[]>([]);
+  const [users, setUsers] = useState<{ username: string; avatar: string }[]>([]);
   const [connected, setConnected] = useState(false);
+  const [avatar, setAvatar] = useState(() => getDefaultAvatar(username));
   const wsRef = useRef<PartySocket | null>(null);
 
   const handleEvent = useCallback((event: ServerEvent) => {
@@ -51,6 +62,7 @@ export default function ChatRoom({ username }: ChatRoomProps) {
           {
             id: event.id,
             username: event.username,
+            avatar: event.avatar,
             text: event.text,
             timestamp: event.timestamp,
             type: "message",
@@ -67,6 +79,7 @@ export default function ChatRoom({ username }: ChatRoomProps) {
   useEffect(() => {
     const ws = createWebSocket(
       username,
+      avatar,
       handleEvent,
       () => setConnected(false)
     );
@@ -80,11 +93,26 @@ export default function ChatRoom({ username }: ChatRoomProps) {
     return () => {
       ws.close();
     };
+    // avatar is intentionally excluded — we only use the initial value on connect
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [username, handleEvent]);
 
   const handleSend = (text: string) => {
     sendEvent(wsRef.current, { event: "message", text });
   };
+
+  const handleAvatarChange = (newAvatar: string) => {
+    setAvatar(newAvatar);
+    sendEvent(wsRef.current, { event: "change-avatar", avatar: newAvatar });
+  };
+
+  const avatarMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const u of users) {
+      map[u.username] = u.avatar;
+    }
+    return map;
+  }, [users]);
 
   return (
     <div className="flex flex-col h-dvh bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50">
@@ -110,11 +138,15 @@ export default function ChatRoom({ username }: ChatRoomProps) {
 
       {/* Users bar */}
       <div className="px-4 pt-3">
-        <UsersList users={users} />
+        <UsersList
+          users={users}
+          currentUser={username}
+          onAvatarChange={handleAvatarChange}
+        />
       </div>
 
       {/* Messages */}
-      <MessageList messages={messages} currentUser={username} />
+      <MessageList messages={messages} currentUser={username} avatarMap={avatarMap} />
 
       {/* Input */}
       <MessageInput onSend={handleSend} />

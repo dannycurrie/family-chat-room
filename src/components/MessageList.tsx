@@ -32,9 +32,10 @@ function formatTime(timestamp: number): string {
 interface MessageListProps {
   messages: DisplayMessage[];
   currentUser: string;
+  avatarMap: Record<string, string>;
 }
 
-export default function MessageList({ messages, currentUser }: MessageListProps) {
+export default function MessageList({ messages, currentUser, avatarMap }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -57,7 +58,7 @@ export default function MessageList({ messages, currentUser }: MessageListProps)
         if (msg.type === "system") {
           return (
             <div key={msg.id} className="text-center">
-              <span className="text-sm text-gray-400 italic">{msg.text}</span>
+              <span className="text-md text-gray-400 italic">{msg.text}</span>
             </div>
           );
         }
@@ -77,13 +78,14 @@ export default function MessageList({ messages, currentUser }: MessageListProps)
                 }`}
             >
               {!isOwn && (
-                <p className="text-xs font-bold mb-0.5 opacity-75">
+                <p className="text-md font-bold mb-0.5 opacity-75">
+                  <span>{msg.avatar || avatarMap[msg.username] || ""}</span>{" "}
                   {msg.username}
                 </p>
               )}
-              <p className="text-[15px] leading-relaxed break-words">{msg.text}</p>
+              <p className="text-lg leading-relaxed break-words">{msg.text}</p>
               <p
-                className={`text-[11px] mt-1 ${
+                className={`text-md mt-1 ${
                   isOwn ? "text-white/70" : "text-gray-400"
                 } text-right`}
               >
