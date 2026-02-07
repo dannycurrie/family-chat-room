@@ -1,0 +1,5 @@
+{
+  "name": "family-chat-room",
+  "main": "party/chatroom.ts",
+  "compatibilityDate": "2025-01-01"
+}

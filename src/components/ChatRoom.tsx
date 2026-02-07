@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { createWebSocket, sendEvent } from "@/lib/websocket";
 import type { DisplayMessage, ServerEvent } from "@/types/chat";
+import type PartySocket from "partysocket";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import UsersList from "./UsersList";
@@ -16,7 +17,7 @@ export default function ChatRoom({ username }: ChatRoomProps) {
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [users, setUsers] = useState<string[]>([]);
   const [connected, setConnected] = useState(false);
-  const wsRef = useRef<WebSocket | null>(null);
+  const wsRef = useRef<PartySocket | null>(null);
 
   const handleEvent = useCallback((event: ServerEvent) => {
     switch (event.event) {
@@ -65,13 +66,13 @@ export default function ChatRoom({ username }: ChatRoomProps) {
 
   useEffect(() => {
     const ws = createWebSocket(
+      username,
       handleEvent,
       () => setConnected(false)
     );
 
     ws.onopen = () => {
       setConnected(true);
-      sendEvent(ws, { event: "join", username });
     };
 
     wsRef.current = ws;

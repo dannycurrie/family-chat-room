@@ -21,17 +21,12 @@ export interface User {
 }
 
 // Client → Server events
-export interface JoinEvent {
-  event: "join";
-  username: string;
-}
-
 export interface SendMessageEvent {
   event: "message";
   text: string;
 }
 
-export type ClientEvent = JoinEvent | SendMessageEvent;
+export type ClientEvent = SendMessageEvent;
 
 // Server → Client events
 export interface UserJoinedEvent {

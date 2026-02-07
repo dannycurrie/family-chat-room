@@ -1,15 +1,18 @@
+import PartySocket from "partysocket";
 import type { ClientEvent, ServerEvent } from "@/types/chat";
 
-function getWsUrl(): string {
-  const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
-  return `wss://${host}:3001`;
-}
-
 export function createWebSocket(
+  username: string,
   onEvent: (event: ServerEvent) => void,
   onClose: () => void
-): WebSocket {
-  const ws = new WebSocket(getWsUrl());
+): PartySocket {
+  const host = process.env.NEXT_PUBLIC_PARTYKIT_HOST ?? "127.0.0.1:1999";
+
+  const ws = new PartySocket({
+    host,
+    room: "main",
+    query: { username },
+  });
 
   ws.onmessage = (e) => {
     try {
@@ -25,7 +28,7 @@ export function createWebSocket(
   return ws;
 }
 
-export function sendEvent(ws: WebSocket | null, event: ClientEvent) {
+export function sendEvent(ws: PartySocket | null, event: ClientEvent) {
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(event));
   }
